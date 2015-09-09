@@ -6,6 +6,8 @@ import webbrowser
 import os
 from sys import argv, exit
 
+recursion_depth = 0
+
 def print_help():
     print "Usage: python {} url_to_fetch".format(__file__)
 
@@ -18,8 +20,22 @@ if argv[1] == '--help' or argv[1] == '-h':
     exit(0)
 
 url = argv[1]
+from_file = False
+
+if url.find("htm") != -1:
+  from_file = True
+  if os.path.exists(url) == False:
+    print "File Not Found. Make sure {} is in the current directory. Exiting Now.".format(url)
+    exit(1)
+  else:
+    print "{} exists".format(url)
 
 def get_html(url):
+    global recursion_depth
+    recursion_depth += 1
+    if recursion_depth >= 14:
+      print "Can't parse the URL. Use the BY FILE method in README. Exiting now."
+      exit(1)
     r = None
     try:
         r = requests.get(url)
@@ -31,11 +47,22 @@ def get_html(url):
     else:
         return r.text
 
-html = get_html(url)
+if from_file == False:
+  html = get_html(url)
+else:
+  html = open(url).read()
+  os.remove(url)
 
 bs = BeautifulSoup(html)
 
-fp = open('{}.html'.format(url[url.rfind('/') + 1 : ]), "w+")
+file_name = None
+
+if from_file == True:
+  file_name = url[ : url.find(".")]
+else:
+  file_name = url[url.rfind('/') + 1 : ]
+
+fp = open('{}.html'.format(file_name), "w+")
 
 all_a = bs.find_all('a')
 
@@ -87,4 +114,4 @@ for element in elements:
 fp.write('</code>')
 fp.close()
 
-webbrowser.open("file://" + os.path.realpath("{}.html".format(url[url.rfind('/') + 1 : ])))
+webbrowser.open("file://" + os.path.realpath("{}.html".format(file_name)))
